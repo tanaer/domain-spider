@@ -6,26 +6,25 @@ namespace App\Library\Spider\Drivers;
 use App\Utils\DomainUtil;
 use App\Utils\SpiderUtils;
 
-class Ename extends BaseDriver
+class Nawang extends BaseDriver
 {
+    protected $detail_url = 'https://na.wang%s';
+
     public function crawl($url, $category, $page)
     {
         $headers = [
-            'host' => 'auction.ename.com',
             'user-agent' => SpiderUtils::getUserAgent(),
         ];
-        $category['page'] = $page;
+        $category['ExpirePreordain_page'] = $page;
         $options = compact('headers');
         $ql_config = [
             'rule' => [
-                'domain' => ['td:nth-child(2)', 'text'],
-                'price' => ['td:nth-child(5) span:nth-child(1)', 'text'],
-                'introduction' => ['td:nth-child(3) div span', 'text'],
-                'url' => ['td:nth-child(2) > a', 'href'],
+                'domain' => ['td:nth-child(1)', 'text'],
+                'url' => ['td:nth-child(7) > a', 'href'],
             ],
-            'range' => 'html > body > div:nth-child(3) > div > div:nth-child(2) > div > div:nth-child(1) > div:nth-child(2) > form > table > tbody > tr',
+            'range' => '#yw0 > table > tbody > tr',
             'encode' => '',
-            'total' => '.c_orange',
+            'next_page' => '#pagination > div > a:contains(下一页)',
         ];
         $data = $this->crawlByQueryList($url, $options, $category, $ql_config);
         return $data;
@@ -41,11 +40,10 @@ class Ename extends BaseDriver
                 continue;
             }
             $item = [];
-            $price = floatval(str_replace(",", "", $domain['price']));
             $item['domain'] = $domain['domain'];
-            $item['introduction'] = $domain['introduction'];
-            $item['price'] = $price;
-            $item['url'] = 'http:' . $domain['url'];
+            $item['introduction'] = "";
+            $item['price'] = "";
+            $item['url'] = sprintf($this->detail_url, $domain['url']);
             array_push($result, $item);
         }
         return $result;

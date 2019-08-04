@@ -33,9 +33,9 @@ class BaseDriver
         } catch (\Exception $exception) {
             //失败重试
             if (!$recheck) {
-                return $this->crawlByAjax($url, $options, true);
+                return $this->crawlByGuzzleHttp($url, $options, true);
             }
-            Log::info('AJAX爬虫失败：' . $exception->getMessage());
+            Log::info('GuzzleHttp爬虫失败：' . $exception->getMessage());
         }
         return $data;
     }
@@ -53,6 +53,7 @@ class BaseDriver
     {
         $data = [];
         $total = 0;
+        $next_page = "";
         try {
             $log_url = $url . '?' . http_build_query($args);
             Log::info('start crawl ' . $log_url);
@@ -63,8 +64,14 @@ class BaseDriver
                 'headers' => $options['headers']
             ];
             $qlObj = $ql->get($url, $args, $opts);
-            $total = $qlObj->find('.c_orange')->text();
-            $total = (int)str_replace(["(", ")"], "", $total);
+
+            if (isset($ql_config['total'])) {
+                $total = $qlObj->find($ql_config['total'])->text();
+                $total = (int)str_replace(["(", ")"], "", $total);
+            } elseif (isset($ql_config['next_page'])) {
+                $next_page = $qlObj->find($ql_config['next_page'])->attr('href');
+            }
+
 
             if (($encode = $ql_config['encode']) && strtolower($ql_config['encode']) != 'utf-8') {
                 $qlObj->removeHead()->encoding('utf-8', $encode);
@@ -81,12 +88,12 @@ class BaseDriver
             $data = $list->all();
             Log::info('end crawl');
         } catch (\Exception $exception) {
-            Log::info("易名爬虫失败：" . $exception->getMessage());
+            Log::info("QueryList爬虫失败：" . $exception->getMessage());
             //失败重试
             if (!$recheck) {
-                return $this->crawlByWeb($url, $options, $args, $ql_config, true);
+                return $this->crawlByQueryList($url, $options, $args, $ql_config, true);
             }
         }
-        return compact('total', 'data');
+        return compact('data', 'total', 'next_page');
     }
 }

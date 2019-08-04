@@ -6,6 +6,8 @@ use App\Library\Notice\DingDingNotice;
 use App\Library\Spider\Drivers\Aiming;
 use App\Library\Spider\Drivers\Aliyun;
 use App\Library\Spider\Drivers\Ename;
+use App\Library\Spider\Drivers\Nawang;
+use App\Utils\CommonUtil;
 use App\Utils\DomainUtil;
 use App\Utils\ShortUrlUtil;
 use App\Utils\SpiderUtils;
@@ -15,9 +17,10 @@ use Illuminate\Support\Facades\Redis;
 class AuctionSpider
 {
     protected $site;
+    const REGISTRAR_22 = '22';
     const REGISTRAR_ENAME = 'ename';
     const REGISTRAR_ALIYUN = 'aliyun';
-    const REGISTRAR_22 = '22';
+    const REGISTRAR_NAWANG = 'nawang';
 
     const REGISTRAR = [
         self::REGISTRAR_ENAME,
@@ -41,8 +44,8 @@ class AuctionSpider
     {
         $domains = $parse_domains = [];
         $site = $this->site;
-        $configs = config('spider-auction');
-        $config = $configs[$site];
+        $spider_configs = config('spider');
+        $config = $spider_configs[$site];
 
         foreach ($config['categories'] as $category) {
             for ($page = 1; $page < 500; $page++) {
@@ -54,6 +57,8 @@ class AuctionSpider
                         $driver = new Aliyun();
                     } elseif ($site == self::REGISTRAR_22) {//爱名网
                         $driver = new Aiming();
+                    } elseif ($site == self::REGISTRAR_NAWANG) {//纳网
+                        $driver = new Nawang();
                     }
                     $data = $driver->crawl($url, $category, $page);
                     $parse = $driver->parse($data);
@@ -66,6 +71,9 @@ class AuctionSpider
                     continue;
                 }
                 if ($page >= $config['max_page']) {
+                    break;
+                }
+                if ($site == self::REGISTRAR_NAWANG && !$data['next_page']) {
                     break;
                 }
             }
@@ -114,6 +122,8 @@ class AuctionSpider
                 //删除历史记录
                 Redis::del('spider:' . $old_hash);
                 Redis::lpop('spider:' . $site);
+                //价格升序
+                $add = CommonUtil::sortArray($add, 'price', SORT_ASC);
                 //新增域名通知
                 $this->notice($site, $add);
             }

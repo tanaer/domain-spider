@@ -32,4 +32,22 @@ class CommonUtil
         }
         return $unique;
     }
+
+    /**
+     * sort array
+     * @param array $array
+     * @param $key
+     * @param int $order
+     * @return array
+     */
+    public static function sortArray(array $array, $key, $order = SORT_DESC)
+    {
+        $tmp = array();
+        foreach ($array as $k => $v) {
+            $tmp[$k] = $v[$key];
+        }
+        array_multisort($tmp, $order, $array);
+        return $array;
+    }
+
 }
